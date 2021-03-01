@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using Greggs.Products.Api.DataAccess;
+using Greggs.Products.Api.Extensions;
 using Greggs.Products.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -11,31 +14,38 @@ namespace Greggs.Products.Api.Controllers
     [Route("[controller]")]
     public class ProductController : ControllerBase
     {
-        private static readonly string[] Products = new[]
-        {
-            "Sausage Roll", "Vegan Sausage Roll", "Steak Bake","Yum Yum", "Pink Jammie"
-        };
 
         private readonly ILogger<ProductController> _logger;
-
-        public ProductController(ILogger<ProductController> logger)
+        private readonly IDataAccess<Product> _productService;
+        private const decimal exchangeRateEuro = 1.11m;
+        
+        public ProductController(ILogger<ProductController> logger, IDataAccess<Product> productService)
         {
             _logger = logger;
+            _productService = productService;
         }
 
         [HttpGet]
-        public IEnumerable<Product> Get(int pageStart = 0, int pageSize = 5)
+        public IEnumerable<Product> Get(int pageStart = 0, int pageSize = 5, string currencyCode = "GBP")
         {
-            if (pageSize > Products.Length)
-                pageSize = Products.Length;
-            
-            var rng = new Random();
-            return Enumerable.Range(1, pageSize).Select(index => new Product
+
+            _logger.LogInformation($"Get products called with pageStart {pageStart}, pageSize {pageSize}.");
+
+            try
             {
-                PriceInPounds = rng.Next(0, 10),
-                Name = Products[rng.Next(Products.Length)]
-            })
-            .ToArray();
+                var products = _productService.List(pageStart, pageSize);
+
+                products?.CalculatePrices(currencyCode, exchangeRateEuro);
+
+                return products;
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, $"Error while fetching product list with pageStart {pageStart}, pageSize {pageSize}, currency {currencyCode}");
+                return new List<Product>();
+            }
         }
+
+
     }
 }
