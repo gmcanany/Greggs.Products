@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Greggs.Products.Api.DataAccess;
+using Greggs.Products.Api.Facades;
 using Greggs.Products.Api.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -27,7 +28,8 @@ namespace Greggs.Products.Api
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddScoped<IDataAccess<Product>, ProductAccess>();
-
+            services.AddScoped<ICurrencyFacade, CurrencyFacade>();
+            
             services.AddControllers();
 
             services.AddSwaggerGen();

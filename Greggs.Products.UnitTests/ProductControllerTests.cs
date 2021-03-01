@@ -8,6 +8,7 @@ using Xunit;
 using Microsoft.Extensions.Logging;
 using FluentAssertions;
 using Greggs.Products.Api.DataAccess;
+using Greggs.Products.Api.Facades;
 using Greggs.Products.Api.Models;
 
 namespace Greggs.Products.UnitTests
@@ -34,7 +35,10 @@ namespace Greggs.Products.UnitTests
             var loggerMock = new Mock<ILogger<ProductController>>();
             var productServiceMock = new Mock<IDataAccess<Product>>();
             productServiceMock.Setup(x => x.List(It.IsAny<int>(), It.IsAny<int>())).Returns(productList).Verifiable();
-            var sut = new ProductController(loggerMock.Object, productServiceMock.Object);
+            var facadeMock = new Mock<ICurrencyFacade>();
+            facadeMock.Setup(x => x.CalculateProductPrices(It.IsAny<IEnumerable<Product>>(), It.IsAny<string>()))
+                .Returns(productList);
+            var sut = new ProductController(loggerMock.Object, productServiceMock.Object, facadeMock.Object);
 
             var products = sut.Get(pageStart, pageSize);
 
@@ -43,11 +47,8 @@ namespace Greggs.Products.UnitTests
         }
 
         [Fact]
-        public async Task Get_Returns_Product_Prices_In_Currency()
+        public async Task Get_Calls_CurrencyFacade()
         {
-            string currencyCode = "EUR";
-            decimal exchangeRate = 1.11m;
-
             int pageStart = 0;
             int pageSize = 5;
             string[] sampleProducts = new[]
@@ -65,14 +66,15 @@ namespace Greggs.Products.UnitTests
             var loggerMock = new Mock<ILogger<ProductController>>();
             var productServiceMock = new Mock<IDataAccess<Product>>();
             productServiceMock.Setup(x => x.List(It.IsAny<int>(), It.IsAny<int>())).Returns(productList).Verifiable();
-            var sut = new ProductController(loggerMock.Object, productServiceMock.Object);
+            var facadeMock = new Mock<ICurrencyFacade>();
+            facadeMock.Setup(x => x.CalculateProductPrices(It.IsAny<IEnumerable<Product>>(), It.IsAny<string>()))
+                .Returns(productList).Verifiable();
+            var sut = new ProductController(loggerMock.Object, productServiceMock.Object, facadeMock.Object);
 
-            var products = sut.Get(pageStart, pageSize, currencyCode);
+            var products = sut.Get(pageStart, pageSize);
 
+            facadeMock.Verify(x => x.CalculateProductPrices(It.IsAny<IEnumerable<Product>>(), It.IsAny<string>()), Times.Once());
             products.Should().BeOfType<Product[]>();
-            products.FirstOrDefault().Currency.Should().Be(currencyCode);
-            products.FirstOrDefault().Price.Should().Be(products.FirstOrDefault().PriceInPounds * exchangeRate);
-
         }
 
 

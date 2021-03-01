@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Greggs.Products.Api.DataAccess;
 using Greggs.Products.Api.Extensions;
+using Greggs.Products.Api.Facades;
 using Greggs.Products.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -17,12 +18,13 @@ namespace Greggs.Products.Api.Controllers
 
         private readonly ILogger<ProductController> _logger;
         private readonly IDataAccess<Product> _productService;
-        private const decimal exchangeRateEuro = 1.11m;
+        private readonly ICurrencyFacade _currencyFacade;
         
-        public ProductController(ILogger<ProductController> logger, IDataAccess<Product> productService)
+        public ProductController(ILogger<ProductController> logger, IDataAccess<Product> productService, ICurrencyFacade currencyFacade)
         {
             _logger = logger;
             _productService = productService;
+            _currencyFacade = currencyFacade;
         }
 
         [HttpGet]
@@ -35,7 +37,7 @@ namespace Greggs.Products.Api.Controllers
             {
                 var products = _productService.List(pageStart, pageSize);
 
-                products?.CalculatePrices(currencyCode, exchangeRateEuro);
+                products = _currencyFacade.CalculateProductPrices(products, currencyCode);
 
                 return products;
             }
